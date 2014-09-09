@@ -12,17 +12,6 @@
 class BSPTreeMesh : public Mesh
 {
 public:
-    /** @brief Nodo del BSP Tree */
-    /*typedef struct BSPNodeStruct
-    {
-        struct BSPNodeStruct*   LeftChild;
-        struct BSPNodeStruct*   RightChild;
-
-        // Non nullo solo se e' una foglia
-        Vec3D*                  Triangle;
-    } BSPNode;*/
-
-
     /** @brief Un generico nodo del BSPTree */
     class BSPNode
     {
@@ -52,8 +41,8 @@ public:
     void    load_OFF       (const std::string &filename);
 
 
-    /*bool    save           (const std::string &filename);
-    bool    load           (const std::string &filename);*/
+    bool    save           (const std::string &filename);
+    bool    load           (const std::string &filename);
 
 
 protected:

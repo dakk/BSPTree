@@ -5,7 +5,6 @@
 
 template <class T> class Vec3D
 {
-
         public:
 
                 inline Vec3D(void) { p[0] = p[1] = p[2] = 0.0; }
