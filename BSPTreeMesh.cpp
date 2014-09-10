@@ -1,8 +1,10 @@
 #include <functional>
 #include <iostream>
 #include <vector>
+#include <qmatrix4x4.h>
 
 #include "BSPTreeMesh.h"
+#include "Mesh.h"
 
 
 /**
@@ -60,27 +62,56 @@ void BSPTreeMesh::draw(/* QUI CI SARA IL PUNTO DI VISTO (SE MI LASCIATE LA LIBER
 void BSPTreeMesh::createBSPTree ()
 {
     mBSPTreeRoot = _createBSPTree (T());
+    std::cout << "yea." << endl;
 }
 
 
 
-std::vector<Mesh::Triangle> leftTo (Mesh::Triangle t, std::vector<Mesh::Triangle> s)
+
+double BSPTreeMesh::determinant (Triangle t, Vertex v)
 {
-    std::vector<Mesh::Triangle> tt;
-    return tt;
+    QMatrix4x4 coplanare;
+
+    std::cout << t[0] << " " << t[1] << " " << t[2] << "\n" << std::flush;
+
+    Vertex v1 = V()[t[0]];
+    Vertex v2 = V()[t[1]];
+    Vertex v3 = V()[t[2]];
+    coplanare.setRow(0, QVector4D (v1.p[0], v1.p[1], v1.p[2], 1));
+    coplanare.setRow(1, QVector4D (v2.p[0], v2.p[1], v2.p[2], 1));
+    coplanare.setRow(2, QVector4D (v3.p[0], v3.p[1], v3.p[2], 1));
+    coplanare.setRow(3, QVector4D (v.p[0], v.p[1], v.p[2], 1));
+
+    return coplanare.determinant();
 }
 
-std::vector<Mesh::Triangle> rightTo (Mesh::Triangle t, std::vector<Mesh::Triangle> s)
+/**
+ * @brief triangleRespectToPlane
+ * @param t
+ * @param subPlane
+ * @return
+ */
+BSPTreeMesh::Position BSPTreeMesh::triangleRespectToPlane (Triangle t, Triangle subPlane)
 {
-    std::vector<Mesh::Triangle> tt;
-    return tt;
+    Vertex v1 = V()[t[0]];
+    Vertex v2 = V()[t[1]];
+    Vertex v3 = V()[t[2]];
+    double d1 = determinant (subPlane, v1);
+    double d2 = determinant (subPlane, v2);
+    double d3 = determinant (subPlane, v3);
+
+    if (d1 < 0.0 && d2 < 0.0 && d3 < 0.0)
+        return POS_LEFT;
+    else if (d1 > 0.0 && d2 > 0.0 && d3 > 0.0)
+        return POS_RIGHT;
+    else if (d1 == 0 && d2 == 0 && d3 == 0)
+        return POS_CENTER;
+    else
+        return POS_INTERSECT;
 }
 
-std::vector<Mesh::Triangle> centerTo (Mesh::Triangle t, std::vector<Mesh::Triangle> s)
-{
-    std::vector<Mesh::Triangle> tt;
-    return tt;
-}
+
+int a = 0;
 
 /**
  * @brief BSPTreeMesh::_createBSPTree funzione ricorsiva di creazione del bsptree
@@ -91,20 +122,55 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
 {
     if (s.size() <= 1)
     {
+        /* Nessun triangolo nel vettore */
         if (s.size() == 0)
             return NULL;
 
+        /* Un triangolo nel vettore, creo una foglia */
         BSPLeafNode* leaf = new BSPLeafNode ();
         leaf->NodeTriangle = s.at(0);
+        a++;
+        std::cout << a << "\n";
         return leaf;
     }
+    /* Piu' triangoli nel vettore, suddivo gli insiemi e richiamo la funzione per i figli */
     else
     {
+        std::vector<Triangle> leftTriangles;
+        std::vector<Triangle> rightTriangles;
+        std::vector<Triangle> centerTriangles;
+
         Triangle subdivisionPlane = s.at(0);
         BSPInternalNode* internal = new BSPInternalNode ();
-        std::vector<Triangle> leftTriangles = leftTo (subdivisionPlane, s);
-        std::vector<Triangle> rightTriangles = rightTo (subdivisionPlane, s);
-        std::vector<Triangle> centerTriangles = centerTo (subdivisionPlane, s);
+
+
+        a++;
+        std::cout << a << "\n";
+
+
+        for (unsigned i=0; i<s.size(); i++)
+        {
+            Position pos = triangleRespectToPlane (s.at(i), subdivisionPlane);
+
+            switch (pos)
+            {
+            case POS_LEFT:
+                leftTriangles.push_back(s.at(i));
+                break;
+
+            case POS_CENTER:
+                centerTriangles.push_back(s.at(i));
+                break;
+
+            case POS_RIGHT:
+                rightTriangles.push_back(s.at(i));
+                break;
+
+            default://intersection per ora li cravo nel nodo torrente
+                centerTriangles.push_back(s.at(i));
+                break;
+            }
+        }
 
         internal->Left = _createBSPTree (leftTriangles);
         internal->Right = _createBSPTree (rightTriangles);
@@ -121,8 +187,9 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
  * @brief BSPTreeMesh::load_OFF
  * @param filename
  */
-void BSPTreeMesh::load_OFF(const std::string &filename)
+void BSPTreeMesh::load_OFF (const std::string &filename)
 {
+    std::cout << "load_off"<<endl;
     Mesh::load_OFF (filename);
 
     /* Prova a caricare il bsptree */

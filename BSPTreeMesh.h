@@ -53,6 +53,7 @@ public:
 
     bool    save           (const std::string &filename);
     bool    load           (const std::string &filename);
+    enum    Position { POS_CENTER = 0, POS_LEFT = 1, POS_RIGHT = 2, POS_INTERSECT = 3 };
 
 
 protected:
@@ -60,7 +61,11 @@ protected:
     BSPNode*    mBSPTreeRoot;
 
 private:
+
     BSPNode*    _createBSPTree  (std::vector<Triangle> s);
+    Position    triangleRespectToPlane (Triangle t, Triangle subPlane);
+    double      determinant (Triangle t, Vertex v);
+
 };
 
 #endif // BSPTREEMESH_H

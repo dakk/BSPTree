@@ -12,7 +12,7 @@ HEADERS =               \
         GLApp.h         \
         Shader.h        \
         window_gl.h \
-    BSPTreeMesh.h
+        BSPTreeMesh.h
 
 SOURCES =               \
         GLApp.cpp       \
@@ -20,7 +20,7 @@ SOURCES =               \
         main.cpp        \
         Mesh.cpp        \
         window_gl.cpp \
-    BSPTreeMesh.cpp
+        BSPTreeMesh.cpp
 
 OTHER_FILES =                   \
         shaders/phong.frag      \
