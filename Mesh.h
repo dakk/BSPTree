@@ -51,7 +51,7 @@ class Mesh
                 void load_OFF(const std::string &filename);
 
 
-        protected:
+        private:
 
                 std::vector<Vertex>   _V;
                 std::vector<Triangle> _T;
