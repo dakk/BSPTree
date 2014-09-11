@@ -105,7 +105,9 @@ void Window_gl::paintGL(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadMatrixd(modelview_matrix);
 
-    //glEnable(GL_DEPTH_TEST);
+#ifdef DEBUG_TRIANGULATION
+    glEnable(GL_DEPTH_TEST);
+#endif
     glEnable(GL_CULL_FACE);
 
     mesh.draw();

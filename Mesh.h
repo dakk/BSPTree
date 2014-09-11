@@ -6,6 +6,8 @@
 
 #include "Vec3D.h"
 
+#define DEBUG_TRIANGULATION
+
 class Mesh
 {
         public:
