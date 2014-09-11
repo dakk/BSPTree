@@ -71,13 +71,16 @@ protected:
 
 private:
     /** Approssimazione per lo zero del determinante */
-    const double DETERMINANT_ZERO_APPROX      = 0.000001;
+    const double DETERMINANT_ZERO_APPROX      = 0.0000001;
 
     void        _draw                   (BSPNode *root, Vertex pov);
     BSPNode*    _createBSPTree          (std::vector<Triangle> s);
     Position    triangleRespectToPlane  (Triangle t, Triangle subPlane);
     double      determinant             (Triangle t, Vertex v);
     Position    determinantToPosition   (double d);
+    Vec3Df*     planeSegmentIntersection(Triangle plane, Vertex a, Vertex b);
+    Vec3Df      normalOfTriangle        (Triangle t);
+
 };
 
 #endif // BSPTREEMESH_H

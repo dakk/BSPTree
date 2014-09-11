@@ -13,6 +13,7 @@
  */
 BSPTreeMesh::BSPTreeMesh()
 {
+    mBSPTreeRoot = NULL;
 }
 
 
@@ -76,7 +77,6 @@ void BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
     }
     else if (BSPInternalNode* internal = dynamic_cast<BSPInternalNode*>(root))
     {
-        //std::cout << internal->NodeTriangles.size() << "  " << endl << std::flush;
         double det = determinant (internal->NodeTriangles[0], pov);
         Position pos = determinantToPosition(det);
 
@@ -123,6 +123,7 @@ BSPTreeMesh::Position BSPTreeMesh::determinantToPosition (double d)
 }
 
 
+
 /**
  * @brief BSPTreeMesh::determinant Calcola il determinante di un vertice rispetto ad un piano
  * @param t Piano
@@ -153,33 +154,6 @@ double BSPTreeMesh::determinant (Triangle t, Vertex v)
 
 
 
-/**
- * @brief triangleRespectToPlane Calcola la posizione di un triangolo rispetto ad
- *                                  un piano di taglio
- * @param t Triangolo del quale effettuare il check
- * @param subPlane Piano di taglio considerato
- * @return Posizione di t rispetto a subPlane
- */
-BSPTreeMesh::Position BSPTreeMesh::triangleRespectToPlane (Triangle t, Triangle subPlane)
-{
-    Vertex v1 = V()[t[0]];
-    Vertex v2 = V()[t[1]];
-    Vertex v3 = V()[t[2]];
-
-    Position p1 = determinantToPosition(determinant (subPlane, v1));
-    Position p2 = determinantToPosition(determinant (subPlane, v2));
-    Position p3 = determinantToPosition(determinant (subPlane, v3));
-
-    /* Se le posizioni dei punti del triangolo t rispetto al piano sono uguali,
-     * rilascio la posizione comune */
-    if (p1 == p2 && p2 == p3)
-        return p1;
-    /* Se non sono tutti uguali, ho un intersezione col piano di taglio */
-    else
-        return POS_INTERSECT;
-}
-
-
 
 /**
  * @brief BSPTreeMesh::createBSPTree
@@ -190,6 +164,9 @@ void BSPTreeMesh::createBSPTree ()
 
     mNodesNumber = 0;
 
+    if (mBSPTreeRoot != NULL)
+        delete mBSPTreeRoot;
+
     /* Randomizzo l'input (I triangoli) */
     std::random_shuffle(T().begin(), T().end());
 
@@ -199,6 +176,64 @@ void BSPTreeMesh::createBSPTree ()
     std::cout << "BSPTreeMesh::createBSPTree() ends with " << mNodesNumber
               << " nodes" << std::endl << std::flush;
 }
+
+
+/**
+ * @brief BSPTreeMesh::normalOfTriangle Calcola la normale di un triangolo
+ * @param t Triangolo di cui calcolare la normale
+ * @return Vettore della normale
+ */
+Vec3Df BSPTreeMesh::normalOfTriangle (Triangle t)
+{
+    Vec3Df dir = Vec3Df::cross_product(V()[t[1]].p - V()[t[0]].p, V()[t[2]].p - V()[t[0]].p);
+    dir.normalize();
+    return dir;
+}
+
+
+/**
+ * @brief BSPTreeMesh::planeSegmentIntersection Calcola l'intersezione tra un piano
+ *              (definito da 3 punti, ed un segmento definito da due vertici)
+ * @param plane
+ * @param a
+ * @param b
+ * @return Il punto di intersezione o NULL
+ * @todo Verificare se effettivamente funziona come stabilito
+ */
+Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex b)
+{
+    Vec3Df ray = a.p - b.p;
+    Vec3Df rayOrigin = a.p;
+    Vec3Df normal = normalOfTriangle (plane);
+    Vec3Df coord = V()[plane[0]].p;
+
+    float d = Vec3Df::dot_product(normal, coord);
+
+    if (Vec3Df::dot_product(normal, ray) == 0.0) //TODO: Or near 0?
+    {
+        //std::cout << "No intersection, 0\n";
+        return NULL;
+    }
+
+    // Compute the t value for the directed line ray intersecting the plane
+    float t = (d - Vec3Df::dot_product(normal, rayOrigin)) / Vec3Df::dot_product(normal, ray);
+
+    // scale the ray by t
+    Vec3Df newRay = ray * t;
+
+    // calc contact point
+    Vec3Df *contact = new Vec3Df (rayOrigin + newRay);
+
+    if (t >= 0.0f && t <= 1.0f)
+    {
+        std::cout << contact[0] << " " << contact[1] << " " << contact[2] << std::endl << std::flush;
+        return contact;
+    }
+
+    //std::cout << "No intersection\n";
+    return NULL;
+}
+
 
 
 /**
@@ -244,7 +279,22 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
         /* Controllo in che posizioni stanno i restanti triangoli della lista ed agisco di conseguenza */
         for (unsigned i=1; i<s.size(); i++)
         {
-            Position pos = triangleRespectToPlane (s.at(i), subdivisionPlane);
+            /* Calcola la posizione di un triangolo rispetto ad
+             * un piano di taglio */
+            Position pos;
+
+            Position p1 = determinantToPosition(determinant (subdivisionPlane, V()[s[i][0]]));
+            Position p2 = determinantToPosition(determinant (subdivisionPlane, V()[s[i][1]]));
+            Position p3 = determinantToPosition(determinant (subdivisionPlane, V()[s[i][2]]));
+
+            /* Se le posizioni dei punti del triangolo t rispetto al piano sono uguali,
+             * rilascio la posizione comune */
+            if (p1 == p2 && p2 == p3)
+                pos = p1;
+            /* Se non sono tutti uguali, ho un intersezione col piano di taglio */
+            else
+                pos = POS_INTERSECT;
+
 
             switch (pos)
             {
@@ -264,7 +314,14 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
              * triangolo i punti ottenuti, ed aggiungo i nuovi vertici ed i nuovi triangoli alle
              * liste apposite */
             default:
-                //centerTriangles.push_back(s.at(i));
+                Vec3Df *intersect1; // Intersection between s[i][0] and s[i][1]
+                Vec3Df *intersect2; // Intersection between s[i][0] and s[i][2]
+                Vec3Df *intersect3; // Intersection between s[i][1] and s[i][2]
+
+                intersect1 = planeSegmentIntersection (subdivisionPlane, V()[s[i][0]], V()[s[i][1]]);
+                intersect2 = planeSegmentIntersection (subdivisionPlane, V()[s[i][0]], V()[s[i][2]]);
+                intersect3 = planeSegmentIntersection (subdivisionPlane, V()[s[i][1]], V()[s[i][2]]);
+
                 break;
             }
         }
