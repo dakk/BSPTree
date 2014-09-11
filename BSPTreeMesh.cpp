@@ -7,6 +7,7 @@
 #include "Mesh.h"
 
 
+
 /**
  * @brief BSPTreeMesh::BSPTreeMesh
  */
@@ -44,35 +45,94 @@ bool BSPTreeMesh::load (const std::string &filename)
  */
 void BSPTreeMesh::draw(/* QUI CI SARA IL PUNTO DI VISTO (SE MI LASCIATE LA LIBERTA') */)
 {
-    // Nothing, per ora uso la funzione tradizionale
+    Vertex pov;
+    pov.p.init(0.0,0.0,0.0);
+
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
+
     glVertexPointer(3, GL_FLOAT, sizeof (Vertex), (GLvoid*)(&V()[0].p));
     glNormalPointer(GL_FLOAT, sizeof (Vertex), (GLvoid*)(((float*)&V()[0].p) + 3));
-    glDrawElements(GL_TRIANGLES, 3 * T().size(), GL_UNSIGNED_INT, (GLvoid*)(&T()[0]));
+
+    _draw (mBSPTreeRoot, pov);
+
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
 }
 
 
-
 /**
- * @brief BSPTreeMesh::createBSPTree
+ * @brief BSPTreeMesh::_draw
+ * @param root
+ * @param pov
  */
-void BSPTreeMesh::createBSPTree ()
+void BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
 {
-    mBSPTreeRoot = _createBSPTree (T());
-    std::cout << "yea." << endl;
+    if (root == NULL) return;
+
+    if (BSPLeafNode* leaf = dynamic_cast<BSPLeafNode*>(root))
+    {
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(&leaf->NodeTriangle));
+    }
+    else if (BSPInternalNode* internal = dynamic_cast<BSPInternalNode*>(root))
+    {
+        //std::cout << internal->NodeTriangles.size() << "  " << endl << std::flush;
+        double det = determinant (internal->NodeTriangles[0], pov);
+        Position pos = determinantToPosition(det);
+
+        switch (pos)
+        {
+        case POS_RIGHT:
+            _draw(internal->Left, pov);
+            glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
+                           GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
+            _draw(internal->Right, pov);
+            break;
+
+        case POS_LEFT:
+            _draw(internal->Right, pov);
+            glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
+                           GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
+            _draw(internal->Left, pov);
+            break;
+
+        default:
+            _draw(internal->Right, pov);
+            _draw(internal->Left, pov);
+            break;
+        }
+    }
 }
 
 
 
 
+/**
+ * @brief BSPTreeMesh::determinantToPosition
+ * @param d
+ * @return
+ */
+BSPTreeMesh::Position BSPTreeMesh::determinantToPosition (double d)
+{
+    if (d < 0.0)
+        return POS_LEFT;
+    else if (d > 0.0)
+        return POS_RIGHT;
+    else
+        return POS_CENTER;
+}
+
+
+/**
+ * @brief BSPTreeMesh::determinant Calcola il determinante di un vertice rispetto ad un piano
+ * @param t Piano
+ * @param v Vertice da verificare
+ * @return determinante
+ */
 double BSPTreeMesh::determinant (Triangle t, Vertex v)
 {
     QMatrix4x4 coplanare;
-
-    std::cout << t[0] << " " << t[1] << " " << t[2] << "\n" << std::flush;
+    double det;
 
     Vertex v1 = V()[t[0]];
     Vertex v2 = V()[t[1]];
@@ -82,40 +142,68 @@ double BSPTreeMesh::determinant (Triangle t, Vertex v)
     coplanare.setRow(2, QVector4D (v3.p[0], v3.p[1], v3.p[2], 1));
     coplanare.setRow(3, QVector4D (v.p[0], v.p[1], v.p[2], 1));
 
-    return coplanare.determinant();
+    det = coplanare.determinant();
+
+    /* Se il valore del determinante e' vicino allo zero, approssimo a zero */
+    if (det <= DETERMINANT_ZERO_APPROX && det >= -DETERMINANT_ZERO_APPROX)
+        return 0.0;
+    else
+        return det;
 }
 
+
+
 /**
- * @brief triangleRespectToPlane
- * @param t
- * @param subPlane
- * @return
+ * @brief triangleRespectToPlane Calcola la posizione di un triangolo rispetto ad
+ *                                  un piano di taglio
+ * @param t Triangolo del quale effettuare il check
+ * @param subPlane Piano di taglio considerato
+ * @return Posizione di t rispetto a subPlane
  */
 BSPTreeMesh::Position BSPTreeMesh::triangleRespectToPlane (Triangle t, Triangle subPlane)
 {
     Vertex v1 = V()[t[0]];
     Vertex v2 = V()[t[1]];
     Vertex v3 = V()[t[2]];
-    double d1 = determinant (subPlane, v1);
-    double d2 = determinant (subPlane, v2);
-    double d3 = determinant (subPlane, v3);
 
-    if (d1 < 0.0 && d2 < 0.0 && d3 < 0.0)
-        return POS_LEFT;
-    else if (d1 > 0.0 && d2 > 0.0 && d3 > 0.0)
-        return POS_RIGHT;
-    else if (d1 == 0 && d2 == 0 && d3 == 0)
-        return POS_CENTER;
+    Position p1 = determinantToPosition(determinant (subPlane, v1));
+    Position p2 = determinantToPosition(determinant (subPlane, v2));
+    Position p3 = determinantToPosition(determinant (subPlane, v3));
+
+    /* Se le posizioni dei punti del triangolo t rispetto al piano sono uguali,
+     * rilascio la posizione comune */
+    if (p1 == p2 && p2 == p3)
+        return p1;
+    /* Se non sono tutti uguali, ho un intersezione col piano di taglio */
     else
         return POS_INTERSECT;
 }
 
 
-int a = 0;
 
 /**
- * @brief BSPTreeMesh::_createBSPTree funzione ricorsiva di creazione del bsptree
- * @param s triangoli della partizione
+ * @brief BSPTreeMesh::createBSPTree
+ */
+void BSPTreeMesh::createBSPTree ()
+{
+    std::cout << "BSPTreeMesh::createBSPTree()" << std::endl << std::flush;
+
+    mNodesNumber = 0;
+
+    /* Randomizzo l'input (I triangoli) */
+    std::random_shuffle(T().begin(), T().end());
+
+    /* Crea il bsp tree */
+    mBSPTreeRoot = _createBSPTree (T());
+
+    std::cout << "BSPTreeMesh::createBSPTree() ends with " << mNodesNumber
+              << " nodes" << std::endl << std::flush;
+}
+
+
+/**
+ * @brief BSPTreeMesh::_createBSPTree Funzione ricorsiva di creazione del bsptree
+ * @param s Triangoli della partizione
  * @return
  */
 BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
@@ -126,29 +214,35 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
         if (s.size() == 0)
             return NULL;
 
+        mNodesNumber++;
+
         /* Un triangolo nel vettore, creo una foglia */
         BSPLeafNode* leaf = new BSPLeafNode ();
         leaf->NodeTriangle = s.at(0);
-        a++;
-        std::cout << a << "\n";
+
         return leaf;
     }
     /* Piu' triangoli nel vettore, suddivo gli insiemi e richiamo la funzione per i figli */
     else
     {
+        mNodesNumber++;
+
         std::vector<Triangle> leftTriangles;
         std::vector<Triangle> rightTriangles;
         std::vector<Triangle> centerTriangles;
 
+        /* Utilizzo il primo triangolo della lista come piano di taglio */
         Triangle subdivisionPlane = s.at(0);
+
+        /* Creo il nodo interno */
         BSPInternalNode* internal = new BSPInternalNode ();
 
+        /* Aggiungo alla lista di quelli centrali, il triangolo utilizzato
+         * come suddivisione */
+        centerTriangles.push_back(s.at(0));
 
-        a++;
-        std::cout << a << "\n";
-
-
-        for (unsigned i=0; i<s.size(); i++)
+        /* Controllo in che posizioni stanno i restanti triangoli della lista ed agisco di conseguenza */
+        for (unsigned i=1; i<s.size(); i++)
         {
             Position pos = triangleRespectToPlane (s.at(i), subdivisionPlane);
 
@@ -166,8 +260,11 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
                 rightTriangles.push_back(s.at(i));
                 break;
 
-            default://intersection per ora li cravo nel nodo torrente
-                centerTriangles.push_back(s.at(i));
+            /* Il triangolo corrente interseca il piano di taglio; trovo i punti di intersezione,
+             * triangolo i punti ottenuti, ed aggiungo i nuovi vertici ed i nuovi triangoli alle
+             * liste apposite */
+            default:
+                //centerTriangles.push_back(s.at(i));
                 break;
             }
         }
@@ -189,7 +286,6 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
  */
 void BSPTreeMesh::load_OFF (const std::string &filename)
 {
-    std::cout << "load_off"<<endl;
     Mesh::load_OFF (filename);
 
     /* Prova a caricare il bsptree */
