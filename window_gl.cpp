@@ -109,6 +109,7 @@ void Window_gl::paintGL(void)
     glEnable(GL_DEPTH_TEST);
 #endif
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
     mesh.draw();
 }

@@ -71,7 +71,7 @@ protected:
 
 private:
     /** Approssimazione per lo zero del determinante */
-    const double DETERMINANT_ZERO_APPROX      = 0.0000001;
+    const double EPS                    = 0.00000001;
 
     void        _draw                   (BSPNode *root, Vertex pov);
     BSPNode*    _createBSPTree          (std::vector<Triangle> s);
@@ -80,6 +80,7 @@ private:
     Position    determinantToPosition   (double d);
     Vec3Df*     planeSegmentIntersection(Triangle plane, Vertex a, Vertex b);
     Vec3Df      normalOfTriangle        (Triangle t);
+    std::vector<Triangle>               triangulateQuad     (std::vector<unsigned> vertices);
 
 };
 
