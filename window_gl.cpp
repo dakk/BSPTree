@@ -1,4 +1,5 @@
 #include "window_gl.h"
+#include <QMatrix3x3>
 
 #define TRACKBALL_RADIUS    0.6
 
@@ -50,6 +51,8 @@ void Window_gl::translate(Vec3Df trans)
     glTranslated(trans[0], trans[1], trans[2]);
     glMultMatrixd(modelview_matrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
+
+    updateCameraPosition();
 }
 
 
@@ -75,6 +78,8 @@ void Window_gl::rotate(Vec3Df axis, float angle)
     glTranslatef(-t[0], -t[1], -t[2]);
     glMultMatrixd(modelview_matrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
+
+    updateCameraPosition();
 }
 
 void Window_gl::centerScene()
@@ -92,8 +97,20 @@ void Window_gl::centerScene()
             modelview_matrix[10] * center[2] +
             modelview_matrix[14] +
             3.0*radius) ) );
+
+    updateCameraPosition();
 }
 
+
+/**
+ * @brief Window_gl::updateCameraPosition Aggiorna la posizione della camera,
+ *          ricavandola dal modelview_matrix
+ * @note La richiamo da ogni funzione che modifica il modelview_matrix (rotate, translate, centerscene)
+ */
+void Window_gl::updateCameraPosition()
+{
+    cameraPosition.init (modelview_matrix[12], modelview_matrix[13], modelview_matrix[14]);
+}
 
 
 void Window_gl::paintGL(void)
@@ -111,7 +128,7 @@ void Window_gl::paintGL(void)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    mesh.draw();
+    mesh.draw(cameraPosition);
 }
 
 

@@ -5,7 +5,7 @@ int main (int argc, char **argv)
 {
     QApplication app( argc, argv );
 
-    GLApp GUI("Shader Test");
+    GLApp GUI("BSPTree rendering");
     GUI.show();
 
     return app.exec();

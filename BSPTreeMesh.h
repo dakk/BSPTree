@@ -15,13 +15,14 @@
  */
 template <class T> class CircularVec : public std::vector<T>
 {
-    inline T& operator[] (int Index)
+public:
+    inline T operator[] (int Index)
     {
-        return (this[Index % this->size()]);
+        return (this->at(Index % this->size()));
     }
-    inline const T& operator[] (int Index) const
+    inline const T operator[] (int Index) const
     {
-        return (this[Index % this->size()]);
+        return (this->at(Index % this->size()));
     }
 };
 
@@ -75,7 +76,7 @@ public:
     /* Metodi e attributi */
             BSPTreeMesh    ();
 
-    void    draw           ();
+    void    draw           (Vec3Df cameraPosition);
     void    load_OFF       (const std::string &filename);
 
     bool    save           (const std::string &filename);
@@ -90,7 +91,7 @@ protected:
 
 private:
     /** Approssimazione per lo zero del determinante */
-    const double EPS                    = 0.00000001; //0.0000000001;
+    const double EPS                    = 0.0000001; //0.0000000001;
 
     void        _draw                   (BSPNode *root, Vertex pov);
     BSPNode*    _createBSPTree          (std::vector<Triangle> s);

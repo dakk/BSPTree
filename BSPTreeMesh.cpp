@@ -45,10 +45,12 @@ int r = 0;
 /**
  * @brief BSPTreeMesh::draw
  */
-void BSPTreeMesh::draw(/* QUI CI SARA IL PUNTO DI VISTO (SE MI LASCIATE LA LIBERTA') */)
+void BSPTreeMesh::draw(Vec3Df cameraPosition)
 {
     Vertex pov;
-    pov.p.init(100.0,100.0,100.0);
+    pov.p = cameraPosition;
+
+    std::cout << pov.p << "\n" << std::flush;
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
@@ -56,14 +58,9 @@ void BSPTreeMesh::draw(/* QUI CI SARA IL PUNTO DI VISTO (SE MI LASCIATE LA LIBER
     glVertexPointer(3, GL_FLOAT, sizeof (Vertex), (GLvoid*)(&V()[0].p));
     glNormalPointer(GL_FLOAT, sizeof (Vertex), (GLvoid*)(((float*)&V()[0].p) + 3));
 
-
-#ifdef DEBUG_TRIANGULATION
-    //Mesh::draw();
-#endif
-
     r = 0;
     _draw (mBSPTreeRoot, pov);
-    std::cout << "Renderized " << r << " of " << T().size() << "\n" << std::flush;
+    std::cout << "BSPTreeMesh::draw() - " << r << " triangles of " << T().size() << " total\n" << std::flush;
 
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
@@ -284,9 +281,9 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
     };
 
     std::vector<Triangle> newTriangles; // Nuovi triangoli generati
-    std::vector<Vec3Df> vertices;       // Dati dei vertici
-    std::vector<unsigned> vertices_i;   // Indici devi vertici
-    std::vector<bool> intersect_v;      // Lista di bool dove true = il vertice i e' un intersezione
+    CircularVec<Vec3Df> vertices;       // Dati dei vertici
+    CircularVec<unsigned> vertices_i;   // Indici devi vertici
+    CircularVec<bool> intersect_v;      // Lista di bool dove true = il vertice i e' un intersezione
     Vec3Df *intersect;                  // Puntatore di appoggio per le intersezioni
 
     /* Aggiungo i vertici in ordine di comparsa */
@@ -303,7 +300,6 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
 
         delete intersect;
     }
-
 
     vertices.push_back(V()[oldTriangle[1]].p);
     vertices_i.push_back(oldTriangle[1]);
@@ -333,10 +329,6 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
         delete intersect;
     }
 
-    if (vertices.size() < 4 || vertices.size() > 5)
-        std::cout << vertices.size() << "\n" << std::flush;
-    //newTriangles.push_back(oldTriangle);
-
 
     /* Ho solo un vertice intersezione, creo due triangoli */
     if (vertices.size() == 4)
@@ -345,52 +337,37 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
         int inti = 0;
         for (inti = 0; !intersect_v[inti]; inti++);
 
-        // Indice del vertice dall'altra parte
-        int ref = (inti-2) % intersect_v.size();
-
-        // I triangoli da fare sono ref - ref + 1 - ref + 2 e ref - 2, ref - 1, ref
-        newTriangles.push_back (Triangle(vertices_i[ref],vertices_i[(ref+1)% intersect_v.size()], vertices_i[(ref+2)% intersect_v.size()]));
-        newTriangles.push_back (Triangle(vertices_i[(ref-2)% intersect_v.size()],vertices_i[(ref-1)% intersect_v.size()], vertices_i[ref]));
+        // I triangoli da fare sono T(inti, inti+1, inti+2) e T(inti-2, inti-1, inti)
+        newTriangles.push_back (Triangle(vertices_i[inti],vertices_i[inti+1], vertices_i[inti+2]));
+        newTriangles.push_back (Triangle(vertices_i[inti-2],vertices_i[inti-1], vertices_i[inti]));
     }
     /* Due intersezioni, creo 3 triangoli */
     else if (vertices.size() == 5)
     {
+        // Trovo l'indice di quello intersezione
         int inti = 0;
         for (inti = 0; !intersect_v[inti]; inti++);
 
-        if (intersect_v[(inti+2)%intersect_v.size()])
-        {
-            // Creo il triangoletto solitario
-            newTriangles.push_back (Triangle(vertices_i[inti],vertices_i[(inti+1)% intersect_v.size()], vertices_i[(inti+2)% intersect_v.size()]));
+        // Se l'intersezione che ha trovato il for, e' distante 3 vertici dal successivo
+        // ritorno al caso generico impostando inti con l'indice dell'altra intersezione
+        if (intersect_v[inti+3])
+            inti = (inti + 3) % intersect_v.size();
 
-            // Triangolo il restante
-            newTriangles.push_back (Triangle(vertices_i[(inti-3)% intersect_v.size()],vertices_i[(inti-2)% intersect_v.size()], vertices_i[(inti)% intersect_v.size()]));
-            newTriangles.push_back (Triangle(vertices_i[(inti-2)% intersect_v.size()],vertices_i[(inti-1)% intersect_v.size()], vertices_i[(inti)% intersect_v.size()]));
-        }
-        else
-        {
-            // Creo il triangoletto solitario
-            newTriangles.push_back (Triangle(vertices_i[(inti-2)% intersect_v.size()],vertices_i[(inti-1)% intersect_v.size()], vertices_i[(inti)% intersect_v.size()]));
+        // Creo il triangoletto solitario
+        newTriangles.push_back (Triangle(vertices_i[inti],vertices_i[inti+1], vertices_i[inti+2]));
 
-            // Triangolo il restante
-            newTriangles.push_back (Triangle(vertices_i[(inti)% intersect_v.size()],vertices_i[(inti+1)% intersect_v.size()], vertices_i[(inti+2)% intersect_v.size()]));
-            newTriangles.push_back (Triangle(vertices_i[(inti)% intersect_v.size()],vertices_i[(inti+2)% intersect_v.size()], vertices_i[(inti+3)% intersect_v.size()]));
-        }
+        // Triangolo il restante quadrilatero
+        newTriangles.push_back (Triangle(vertices_i[inti+2],vertices_i[inti+3], vertices_i[inti]));
+        newTriangles.push_back (Triangle(vertices_i[inti+3],vertices_i[inti+4], vertices_i[inti]));
     }
-    /* Nessuna intersezione, in teoria non dovrebbe accadere */
+    /* Nessuna intersezione, in teoria non dovrebbe accadere; potrebbe accadere per errori
+     * numerici, ma non e' mai accaduto coi modelli di prova. Lascio comunque questo ramo else
+     * per debug */
     else if (vertices.size() == 3)
     {
         newTriangles.push_back(Triangle (vertices_i[0],vertices_i[1],vertices_i[2]));
-
-        std::cout << "Ho solo tre vertici in triangulate, non dovrebbe accadere";
     }
-    else
-    {
-        std::cout << "E' impossibile che siamo arrivati sin qui, mi dispiace :(\n" << std::flush;
 
-        for (int i = 0; i < vertices_i.size(); i++)
-            std::cout << " Point "<<vertices[i]<<"\n"<<std::flush;
-    }
     return newTriangles;
 }
 
@@ -463,7 +440,7 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
             else
                 pos = POS_INTERSECT;
 
-            // Casi di edge che giace sul piano di taglio
+            /* Casi di edge che giace sul piano di taglio, li tratto separatamente */
             if (p0 == POS_CENTER && p1 == POS_CENTER && p2 != POS_CENTER)
                 pos = p2;
             if (p1 == POS_CENTER && p2 == POS_CENTER && p0 != POS_CENTER)
@@ -471,8 +448,7 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
             if (p0 == POS_CENTER && p2 == POS_CENTER && p1 != POS_CENTER)
                 pos = p1;
 
-
-
+            /* A seconda della posizione del triangolo rispetto al piano di taglio, agisco di conseguenza */
             switch (pos)
             {
             case POS_LEFT:
@@ -506,28 +482,30 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
                         Position p1 = determinantToPosition(determinant (subdivisionPlane, V()[t[1]]));
                         Position p2 = determinantToPosition(determinant (subdivisionPlane, V()[t[2]]));
 
+                        //std::cout << positionToString(p0) << positionToString(p1) << positionToString(p2) << "\n"<<std::flush;
+
                         if (p0 != POS_CENTER) return p0;
                         else if (p1 != POS_CENTER) return p1;
                         else return p2;
                     }
                 };
 
-
                 //std::cout << positionToString(p0) << " " << positionToString(p1) << " " << positionToString(p2) << "\n" << std::flush;
-                // Ritriangolo il triangolo corrente, considerando il piano di taglio
+
+                /* Ritriangolo il triangolo corrente, considerando il piano di taglio */
                 std::vector<Triangle> newTriangles = triangulate(s[i], subdivisionPlane);
 
-
-                // Elimino il vecchio triangolo
+                /* Elimino il vecchio triangolo */
                 T().erase(T().begin() + i);
 
-                // Aggiungo i triangoli ottenuti
+                /* Aggiungo i triangoli ottenuti */
                 for (int j = 0; j < newTriangles.size(); j++)
                 {
-                    // Aggiungo il nuovo triangolo
+                    /* Aggiungo il nuovo triangolo alla lista totale dei triangoli */
                     T().push_back(newTriangles[j]);
 
-
+                    /* Ottengo la posizione prevalente del nuovo triangolo rispetto
+                     * al piano di taglio, e lo aggiungo alla lista apposita */
                     Position prevalent = prevalentPosition (newTriangles[j]);
 
                     switch (prevalent)
@@ -540,10 +518,10 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
                         break;
                     default:
                         centerTriangles.push_back(newTriangles[j]);
-
-                        std::cout << V()[newTriangles[j][0]].p << " - " << V()[newTriangles[j][1]].p << " - " << V()[newTriangles[j][2]].p << "\n";
-                        std::cout << V()[subdivisionPlane[0]].p << " - " << V()[subdivisionPlane[1]].p << " - " << V()[subdivisionPlane[2]].p << "\n";
-                        std::cout << "Non puo' accadere " << prevalent << "\n" << std::flush;
+                        break;
+                        //std::cout << V()[newTriangles[j][0]].p << " - " << V()[newTriangles[j][1]].p << " - " << V()[newTriangles[j][2]].p << "\n";
+                        //std::cout << V()[subdivisionPlane[0]].p << " - " << V()[subdivisionPlane[1]].p << " - " << V()[subdivisionPlane[2]].p << "\n";
+                        //std::cout << "Non puo' accadere " << prevalent << "\n" << std::flush;
                     }
                 }
                 break;

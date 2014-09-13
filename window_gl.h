@@ -48,11 +48,13 @@ class Window_gl : public QGLWidget
                 void centerScene();
                 void mapToSphere(QPoint v2D, Vec3Df& v3D);
 
+                void updateCameraPosition();
+
 
 
 
         private:
-
+                Vec3Df cameraPosition;
 
                 // pointers to mesh and skeleton
                 //
