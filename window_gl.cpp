@@ -126,15 +126,14 @@ void Window_gl::updateCameraRotation (float angle, Vec3Df axisRotation)
 {
     double r = fabs (Vec3Df::distance (cameraPosition, Vec3Df (0.0, 0.0, 0.0)));
     std::cout << r << "\n";
+    std::cout << axisRotation*angle << "\n";
 
+    cameraRotation += axisRotation;
     axisRotation *= angle;
-    axisRotation += cameraRotation;
 
-    cameraPosition[0] = r * qSin (axisRotation[0]) * qCos (axisRotation[1]);
-    cameraPosition[1] = r * qSin (axisRotation[0]) * qSin (axisRotation[1]);
-    cameraPosition[2] = r * qCos (axisRotation[0]);
-
-    cameraRotation = axisRotation;
+    cameraPosition[0] = r * qSin (axisRotation[0] * 180.0 / M_PI) * qCos (axisRotation[1]* 180.0 / M_PI);
+    cameraPosition[1] = r * qSin (axisRotation[0] * 180.0 / M_PI) * qSin (axisRotation[1] * 180.0 / M_PI);
+    cameraPosition[2] = r * qCos (axisRotation[1]);
 }
 
 
