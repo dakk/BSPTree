@@ -9,27 +9,17 @@
 
 class Window_gl : public QGLWidget
 {
-
         Q_OBJECT
-
-
         public:
-
                 Window_gl(QWidget *parent = 0);
 
-
-        public
-        slots:
-
+        public slots:
                 void open(const QString &filename);
 
-
         protected:
-
                 void initializeGL();
                 void resizeGL(int w, int h);
                 void paintGL();
-
 
                 // event handlers...
                 //
@@ -37,7 +27,6 @@ class Window_gl : public QGLWidget
                 void mousePressEvent(QMouseEvent *event);
                 void mouseMoveEvent(QMouseEvent *event);
                 void wheelEvent(QWheelEvent *event);
-
 
                 // define a new orthogonal projection
                 // (to be called after any diagonal update)
@@ -48,23 +37,20 @@ class Window_gl : public QGLWidget
                 void centerScene();
                 void mapToSphere(QPoint v2D, Vec3Df& v3D);
 
-                void updateCameraPosition();
-
-
+                void updateCameraPosition(Vec3Df trans);
+                void updateCameraRotation (float angle, Vec3Df axisRotation);
 
 
         private:
                 Vec3Df cameraPosition;
+                Vec3Df cameraRotation;
 
                 // pointers to mesh and skeleton
                 //
                 BSPTreeMesh    mesh;
                 Shader  *phongShader;
-
-
                 GLdouble projection_matrix[16],
                          modelview_matrix[16];
-
 
                 // Trackball handling
                 //

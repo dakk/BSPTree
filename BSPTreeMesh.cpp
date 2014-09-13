@@ -6,6 +6,7 @@
 #include "BSPTreeMesh.h"
 #include "Mesh.h"
 
+//TODO Rimuovere i dati di debug, o integrarli tramite .h
 
 
 /**
@@ -18,8 +19,8 @@ BSPTreeMesh::BSPTreeMesh()
 
 
 /**
- * @brief BSPTreeMesh::save salva il BSPTree
- * @param filename path di salvataggio
+ * @brief BSPTreeMesh::save Salva il BSPTree
+ * @param filename Path di salvataggio
  * @return true se l'operazione e' andata a buon fine
  */
 bool BSPTreeMesh::save (const std::string &filename)
@@ -30,8 +31,8 @@ bool BSPTreeMesh::save (const std::string &filename)
 
 
 /**
- * @brief BSPTreeMesh::load carica il BSPTree
- * @param filename path di caricamento
+ * @brief BSPTreeMesh::load Carica il BSPTree
+ * @param filename Path di caricamento
  * @return true se l'operazione e' andata a buon fine
  */
 bool BSPTreeMesh::load (const std::string &filename)
@@ -41,7 +42,13 @@ bool BSPTreeMesh::load (const std::string &filename)
 }
 
 
+
+
 int r = 0;
+int lx = 0;
+int rx = 0;
+int cx = 0;
+
 /**
  * @brief BSPTreeMesh::draw
  */
@@ -61,6 +68,7 @@ void BSPTreeMesh::draw(Vec3Df cameraPosition)
     r = 0;
     _draw (mBSPTreeRoot, pov);
     std::cout << "BSPTreeMesh::draw() - " << r << " triangles of " << T().size() << " total\n" << std::flush;
+    std::cout << "BSPTreeMesh::draw() - Left: " << lx << " Right: " << rx << "\n" << std::flush;
 
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
@@ -93,6 +101,7 @@ void BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
             glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
                            GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
             r+=internal->NodeTriangles.size();
+            rx++;
             _draw(internal->Right, pov);
             break;
 
@@ -101,10 +110,11 @@ void BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
             glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
                            GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
             r+=internal->NodeTriangles.size();
+            lx++;
             _draw(internal->Left, pov);
             break;
 
-        default:
+        case POS_CENTER:
             #ifdef DEBUG_TRIANGULATION
                 glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
                                GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
@@ -144,20 +154,8 @@ BSPTreeMesh::Position BSPTreeMesh::determinantToPosition (double d)
  * @param v Vertice da verificare
  * @return determinante
  */
-double BSPTreeMesh::determinant (Triangle t, Vertex v)
+double BSPTreeMesh::determinant (Triangle t, Vertex v, double eps)
 {
-    /*
-    Vec3Df nor = normalOfTriangle(t);
-    double sidevalue = Vec3Df::dot_product(nor, v.p);
-    double dist = Vec3Df::distance(V()[t[0]], v.p);
-
-    if (sidevalue == dist)
-        return 0.0;
-    else if (sidevalue < dist)
-        return 1.0;
-    else return -1.0;
-    */
-
     QMatrix4x4 coplanare;
     double det;
 
@@ -172,7 +170,7 @@ double BSPTreeMesh::determinant (Triangle t, Vertex v)
     det = coplanare.determinant();
 
     /* Se il valore del determinante e' vicino allo zero, approssimo a zero */
-    if (det <= EPS && det >= -EPS)
+    if (det <= eps && det >= -eps)
         return 0.0;
     else
         return det;
@@ -181,6 +179,8 @@ double BSPTreeMesh::determinant (Triangle t, Vertex v)
 
 
 
+int nrx=0;
+int nlx=0;
 /**
  * @brief BSPTreeMesh::createBSPTree
  */
@@ -195,6 +195,8 @@ void BSPTreeMesh::createBSPTree ()
 
     /* Randomizzo l'input (I triangoli) */
     std::random_shuffle(T().begin(), T().end());
+    std::random_shuffle(T().begin(), T().end());
+    std::random_shuffle(T().begin(), T().end());
 
     /* Crea il bsp tree */
     mBSPTreeRoot = _createBSPTree (T());
@@ -203,6 +205,7 @@ void BSPTreeMesh::createBSPTree ()
 
     std::cout << "BSPTreeMesh::createBSPTree() ends with " << mNodesNumber
               << " nodes" << std::endl << std::flush;
+    std::cout << "BSPTreeMesh::createBSPTree() have " << nlx << " left nodes and " << nrx << " right nodes\n" << std::flush;
 }
 
 
@@ -265,6 +268,8 @@ Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex 
     else
         return contact;
 }
+
+
 
 
 
@@ -387,19 +392,20 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
 
 /**
  * @brief positionOfTriangle
- * @param subplane
- * @param t
+ * @param subplane Piano di taglio
+ * @param t Triangolo da verificare
+ * @param eps Definisce l'eps da utilizzare per il determinante
+ * @param prevalent Se true, restituisce la posizione prevalente (evitando POS_INTERSECT e POS_CENTER)
  * @return
  */
-BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triangle t)
+BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triangle t, double eps, bool prevalent)
 {
-    Position pos;
     Position ps[3];
     unsigned left = 0, right = 0, center = 0;
 
-    ps[0] = determinantToPosition(determinant (subplane, V()[t[0]]));
-    ps[1] = determinantToPosition(determinant (subplane, V()[t[1]]));
-    ps[2] = determinantToPosition(determinant (subplane, V()[t[2]]));
+    ps[0] = determinantToPosition(determinant (subplane, V()[t[0]], eps));
+    ps[1] = determinantToPosition(determinant (subplane, V()[t[1]], eps));
+    ps[2] = determinantToPosition(determinant (subplane, V()[t[2]], eps));
 
     for (int i=0; i<3; i++)
     {
@@ -414,6 +420,14 @@ BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triang
         default:
             center++;
         }
+    }
+
+    if (prevalent)
+    {
+        if (left > right)
+            return POS_LEFT;
+        else
+            return POS_RIGHT;
     }
 
     if (left > 0 && right > 0)
@@ -507,7 +521,7 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
 
                     /* Ottengo la posizione prevalente del nuovo triangolo rispetto
                      * al piano di taglio, e lo aggiungo alla lista apposita */
-                    Position prevalent = positionOfTriangle(subdivisionPlane, newTriangles[j]);
+                    Position prevalent = positionOfTriangle(subdivisionPlane, newTriangles[j], 0.0, true);
 
                     switch (prevalent)
                     {
@@ -519,14 +533,20 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
                         break;
                     default:
                         centerTriangles.push_back(newTriangles[j]);
-                        std::cout << V()[newTriangles[j][0]].p << "," << V()[newTriangles[j][1]].p << "," << V()[newTriangles[j][2]].p << "\n";
-                        std::cout << V()[subdivisionPlane[0]].p << "," << V()[subdivisionPlane[1]].p << "," << V()[subdivisionPlane[2]].p << "\n";
+                        std::cout << V()[s[i][0]].p << "\n" << V()[s[i][1]].p << "\n" << V()[s[i][2]].p << "\n";
+                        std::cout << V()[newTriangles[j][0]].p << "\n" << V()[newTriangles[j][1]].p << "\n" << V()[newTriangles[j][2]].p << "\n";
+                        std::cout << V()[subdivisionPlane[0]].p << "\n" << V()[subdivisionPlane[1]].p << "\n" << V()[subdivisionPlane[2]].p << "\n";
                         std::cout << "Non puo' accadere " << prevalent << "\n" << std::flush;
                     }
                 }
                 break;
             }
         }
+
+        if (leftTriangles.size() != 0)
+            nlx++;
+        if (rightTriangles.size() != 0)
+            nrx++;
 
         internal->Left = _createBSPTree (leftTriangles);
         internal->Right = _createBSPTree (rightTriangles);

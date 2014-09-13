@@ -7,6 +7,11 @@
 #include "Mesh.h"
 
 
+
+/** Approssimazione per lo zero del determinante */
+#define EPS 0.0000001
+//0.0000000001;
+
 /**
  * @brief Un vettore circolare; ci servira' per accedere agli elementi
  * senza dover fare il modulo a mano durante l'utilizzo.
@@ -90,18 +95,16 @@ protected:
     unsigned    mNodesNumber;
 
 private:
-    /** Approssimazione per lo zero del determinante */
-    const double EPS                    = 0.0000001; //0.0000000001;
-
     void        _draw                   (BSPNode *root, Vertex pov);
     BSPNode*    _createBSPTree          (std::vector<Triangle> s);
     Position    triangleRespectToPlane  (Triangle t, Triangle subPlane);
-    double      determinant             (Triangle t, Vertex v);
+    double      determinant             (Triangle t, Vertex v, double eps = EPS);
     Position    determinantToPosition   (double d);
     Vec3Df*     planeSegmentIntersection(Triangle plane, Vertex a, Vertex b);
     Vec3Df      normalOfTriangle        (Triangle t);
-    Position    positionOfTriangle      (Triangle subplane, Triangle t);
+    Position    positionOfTriangle      (Triangle subplane, Triangle t, double eps = EPS, bool prevalent = false);
     std::vector<Triangle>               triangulate     (Triangle oldTriangle, Triangle cutPlane);
+
 
 
     /** Traduce Position in una stringa, utilizzata per debug */

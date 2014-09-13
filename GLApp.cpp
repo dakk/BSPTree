@@ -17,5 +17,9 @@ GLApp::GLApp(const QString &app_name) : QMainWindow ()
         setCentralWidget (_viewer);
         setMinimumSize(800, 600);
         setWindowTitle(app_name);
+
+        /* Senza settare esplicitamente il focus, non mi cattura gli eventi
+         * keypress della tastiera */
+        _viewer->setFocus();
 }
 

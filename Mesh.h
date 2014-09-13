@@ -8,7 +8,7 @@
 
 /* Se deccomentato, renderizza tutti i triangoli del BSPTree. Utilizzato
  * per il debug della ri-triangolazione dei triangoli intersecati */
-#define DEBUG_TRIANGULATION
+//#define DEBUG_TRIANGULATION
 
 class Mesh
 {

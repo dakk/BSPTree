@@ -52,7 +52,7 @@ void Window_gl::translate(Vec3Df trans)
     glMultMatrixd(modelview_matrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
 
-    updateCameraPosition();
+    updateCameraPosition(trans);
 }
 
 
@@ -79,7 +79,7 @@ void Window_gl::rotate(Vec3Df axis, float angle)
     glMultMatrixd(modelview_matrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
 
-    updateCameraPosition();
+    updateCameraRotation(angle, axis);
 }
 
 void Window_gl::centerScene()
@@ -97,19 +97,44 @@ void Window_gl::centerScene()
             modelview_matrix[10] * center[2] +
             modelview_matrix[14] +
             3.0*radius) ) );
-
-    updateCameraPosition();
 }
 
 
 /**
- * @brief Window_gl::updateCameraPosition Aggiorna la posizione della camera,
- *          ricavandola dal modelview_matrix
- * @note La richiamo da ogni funzione che modifica il modelview_matrix (rotate, translate, centerscene)
+ * @brief Window_gl::updateCameraPosition
+ * @note La camera e' sempre fissa in 0.0, 0.0, 0.0; quando avviene una trasformazione geometrica non
+ *      e' la camera che ruota o trasla ma tutto l'universo che si trasla e ruota, un po' come la
+ *      PlanetExpress di Futurama.
+ *      Questa funzione quindi, calcola la posizione del pov, ipotizzando che l'oggetto
+ *      renderizzato rimanga fermo mentre il pov si modifica.
+ * @note Stessa cosa per updateCameraRotation
  */
-void Window_gl::updateCameraPosition()
+void Window_gl::updateCameraPosition (Vec3Df pos)
 {
-    cameraPosition.init (modelview_matrix[12], modelview_matrix[13], modelview_matrix[14]);
+    cameraPosition += pos;
+}
+
+/**
+ * @brief Window_gl::updateCameraRotation
+ * @param angle
+ * @param axisRotation
+ * @note Per la rotazione invece, ipotizzio che l'oggetto sia circondato da una sfera;
+ *          le rotazioni fanno muovere la camera nella superficie di tale sfera.
+ * @note La sfera ha raggio dist(camera, 0)
+ */
+void Window_gl::updateCameraRotation (float angle, Vec3Df axisRotation)
+{
+    double r = fabs (Vec3Df::distance (cameraPosition, Vec3Df (0.0, 0.0, 0.0)));
+    std::cout << r << "\n";
+
+    axisRotation *= angle;
+    axisRotation += cameraRotation;
+
+    cameraPosition[0] = r * qSin (axisRotation[0]) * qCos (axisRotation[1]);
+    cameraPosition[1] = r * qSin (axisRotation[0]) * qSin (axisRotation[1]);
+    cameraPosition[2] = r * qCos (axisRotation[0]);
+
+    cameraRotation = axisRotation;
 }
 
 
