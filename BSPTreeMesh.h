@@ -8,6 +8,25 @@
 
 
 /**
+ * @brief Un vettore circolare; ci servira' per accedere agli elementi
+ * senza dover fare il modulo a mano durante l'utilizzo.
+ *
+ * @todo Migrare BSPTreeMesh::triangulate() per usare questa classe
+ */
+template <class T> class CircularVec : public std::vector<T>
+{
+    inline T& operator[] (int Index)
+    {
+        return (this[Index % this->size()]);
+    }
+    inline const T& operator[] (int Index) const
+    {
+        return (this[Index % this->size()]);
+    }
+};
+
+
+/**
  * @brief Un generico nodo del BSPTree; in questo modo, ereditando da questa
  * classe posso definire nodi interni e foglie, ed uso il tipo BSPNode come
  * tipo per i puntatori ai figli (in modo da includere sia le foglie che i ndoi interni)
@@ -71,7 +90,7 @@ protected:
 
 private:
     /** Approssimazione per lo zero del determinante */
-    const double EPS                    = 0.00000001;
+    const double EPS                    = 0.00000001; //0.0000000001;
 
     void        _draw                   (BSPNode *root, Vertex pov);
     BSPNode*    _createBSPTree          (std::vector<Triangle> s);
@@ -80,7 +99,28 @@ private:
     Position    determinantToPosition   (double d);
     Vec3Df*     planeSegmentIntersection(Triangle plane, Vertex a, Vertex b);
     Vec3Df      normalOfTriangle        (Triangle t);
-    std::vector<Triangle>               triangulateQuad     (std::vector<unsigned> vertices);
+    std::vector<Triangle>               triangulate     (Triangle oldTriangle, Triangle cutPlane);
+
+
+    /** Traduce Position in una stringa, utilizzata per debug */
+    inline std::string positionToString (Position p)
+    {
+        switch (p)
+        {
+        case POS_RIGHT:
+            return "Right";
+            break;
+        case POS_LEFT:
+            return "Left";
+            break;
+        case POS_CENTER:
+            return "Center";
+            break;
+        case POS_INTERSECT:
+            return "Intersect";
+            break;
+        }
+    }
 
 };
 
