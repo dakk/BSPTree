@@ -100,6 +100,7 @@ private:
     Position    determinantToPosition   (double d);
     Vec3Df*     planeSegmentIntersection(Triangle plane, Vertex a, Vertex b);
     Vec3Df      normalOfTriangle        (Triangle t);
+    Position    positionOfTriangle      (Triangle subplane, Triangle t);
     std::vector<Triangle>               triangulate     (Triangle oldTriangle, Triangle cutPlane);
 
 

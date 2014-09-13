@@ -146,6 +146,18 @@ BSPTreeMesh::Position BSPTreeMesh::determinantToPosition (double d)
  */
 double BSPTreeMesh::determinant (Triangle t, Vertex v)
 {
+    /*
+    Vec3Df nor = normalOfTriangle(t);
+    double sidevalue = Vec3Df::dot_product(nor, v.p);
+    double dist = Vec3Df::distance(V()[t[0]], v.p);
+
+    if (sidevalue == dist)
+        return 0.0;
+    else if (sidevalue < dist)
+        return 1.0;
+    else return -1.0;
+    */
+
     QMatrix4x4 coplanare;
     double det;
 
@@ -373,6 +385,47 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
 
 
 
+/**
+ * @brief positionOfTriangle
+ * @param subplane
+ * @param t
+ * @return
+ */
+BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triangle t)
+{
+    Position pos;
+    Position ps[3];
+    unsigned left = 0, right = 0, center = 0;
+
+    ps[0] = determinantToPosition(determinant (subplane, V()[t[0]]));
+    ps[1] = determinantToPosition(determinant (subplane, V()[t[1]]));
+    ps[2] = determinantToPosition(determinant (subplane, V()[t[2]]));
+
+    for (int i=0; i<3; i++)
+    {
+        switch (ps[i])
+        {
+        case POS_LEFT:
+            left++;
+            break;
+        case POS_RIGHT:
+            right++;
+            break;
+        default:
+            center++;
+        }
+    }
+
+    if (left > 0 && right > 0)
+        return POS_INTERSECT;
+    else if (center == 3)
+        return POS_CENTER;
+    else if (left > 0)
+        return POS_LEFT;
+    else
+        return POS_RIGHT;
+}
+
 
 /**
  * @brief BSPTreeMesh::_createBSPTree Funzione ricorsiva di creazione del bsptree
@@ -419,34 +472,7 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
         {
             /* Calcola la posizione di un triangolo rispetto ad
              * un piano di taglio */
-            Position pos;
-
-            Position p0 = determinantToPosition(determinant (subdivisionPlane, V()[s[i][0]]));
-            Position p1 = determinantToPosition(determinant (subdivisionPlane, V()[s[i][1]]));
-            Position p2 = determinantToPosition(determinant (subdivisionPlane, V()[s[i][2]]));
-
-            /* Se le posizioni dei punti del triangolo t rispetto al piano sono uguali,
-             * rilascio la posizione comune. Trascuro i casi in cui ho un vertice al centro
-             * e gli altri tutti da una parte */
-            if ((p0 == p1 && p1 == p2) || (p0 == POS_CENTER && (p1 == p2))
-                    || (p1 == POS_CENTER && (p0 == p2)) || (p2 == POS_CENTER && (p0 == p1)))
-            {
-                if (p0 != POS_CENTER)
-                    pos = p0;
-                else
-                    pos = p1;
-            }
-            /* Se non sono tutti uguali, ho un intersezione col piano di taglio */
-            else
-                pos = POS_INTERSECT;
-
-            /* Casi di edge che giace sul piano di taglio, li tratto separatamente */
-            if (p0 == POS_CENTER && p1 == POS_CENTER && p2 != POS_CENTER)
-                pos = p2;
-            if (p1 == POS_CENTER && p2 == POS_CENTER && p0 != POS_CENTER)
-                pos = p0;
-            if (p0 == POS_CENTER && p2 == POS_CENTER && p1 != POS_CENTER)
-                pos = p1;
+            Position pos = positionOfTriangle (subdivisionPlane, s[i]);
 
             /* A seconda della posizione del triangolo rispetto al piano di taglio, agisco di conseguenza */
             switch (pos)
@@ -467,31 +493,6 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
              * triangolo i punti ottenuti, ed aggiungo i nuovi vertici ed i nuovi triangoli alle
              * liste apposite */
             case POS_INTERSECT:
-                std::function<Position(Triangle)> prevalentPosition =
-                        [&, this](Triangle t)
-                {
-                    if ((t[0] == s[i][0] || t[0] == s[i][1] || t[0] == s[i][2]) && p0 != POS_CENTER)
-                        return p0;
-                    else if ((t[1] == s[i][0] || t[1] == s[i][1] || t[1] == s[i][2]) && p1 != POS_CENTER)
-                        return p1;
-                    else if ((t[2] == s[i][0] || t[2] == s[i][1] || t[2] == s[i][2]) && p2 != POS_CENTER)
-                        return p2;
-                    else
-                    {
-                        Position p0 = determinantToPosition(determinant (subdivisionPlane, V()[t[0]]));
-                        Position p1 = determinantToPosition(determinant (subdivisionPlane, V()[t[1]]));
-                        Position p2 = determinantToPosition(determinant (subdivisionPlane, V()[t[2]]));
-
-                        //std::cout << positionToString(p0) << positionToString(p1) << positionToString(p2) << "\n"<<std::flush;
-
-                        if (p0 != POS_CENTER) return p0;
-                        else if (p1 != POS_CENTER) return p1;
-                        else return p2;
-                    }
-                };
-
-                //std::cout << positionToString(p0) << " " << positionToString(p1) << " " << positionToString(p2) << "\n" << std::flush;
-
                 /* Ritriangolo il triangolo corrente, considerando il piano di taglio */
                 std::vector<Triangle> newTriangles = triangulate(s[i], subdivisionPlane);
 
@@ -506,7 +507,7 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
 
                     /* Ottengo la posizione prevalente del nuovo triangolo rispetto
                      * al piano di taglio, e lo aggiungo alla lista apposita */
-                    Position prevalent = prevalentPosition (newTriangles[j]);
+                    Position prevalent = positionOfTriangle(subdivisionPlane, newTriangles[j]);
 
                     switch (prevalent)
                     {
@@ -518,10 +519,9 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
                         break;
                     default:
                         centerTriangles.push_back(newTriangles[j]);
-                        break;
-                        //std::cout << V()[newTriangles[j][0]].p << " - " << V()[newTriangles[j][1]].p << " - " << V()[newTriangles[j][2]].p << "\n";
-                        //std::cout << V()[subdivisionPlane[0]].p << " - " << V()[subdivisionPlane[1]].p << " - " << V()[subdivisionPlane[2]].p << "\n";
-                        //std::cout << "Non puo' accadere " << prevalent << "\n" << std::flush;
+                        std::cout << V()[newTriangles[j][0]].p << "," << V()[newTriangles[j][1]].p << "," << V()[newTriangles[j][2]].p << "\n";
+                        std::cout << V()[subdivisionPlane[0]].p << "," << V()[subdivisionPlane[1]].p << "," << V()[subdivisionPlane[2]].p << "\n";
+                        std::cout << "Non puo' accadere " << prevalent << "\n" << std::flush;
                     }
                 }
                 break;
