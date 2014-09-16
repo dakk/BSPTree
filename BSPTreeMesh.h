@@ -95,7 +95,7 @@ protected:
     unsigned    mNodesNumber;
 
 private:
-    void        _draw                   (BSPNode *root, Vertex pov);
+    unsigned    _draw                   (BSPNode *root, Vertex pov);
     BSPNode*    _createBSPTree          (std::vector<Triangle> s);
     Position    triangleRespectToPlane  (Triangle t, Triangle subPlane);
     double      determinant             (Triangle t, Vertex v, double eps = EPS);

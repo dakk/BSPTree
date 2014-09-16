@@ -6,7 +6,6 @@
 #include "BSPTreeMesh.h"
 #include "Mesh.h"
 
-//TODO Rimuovere i dati di debug, o integrarli tramite .h
 
 
 /**
@@ -43,17 +42,14 @@ bool BSPTreeMesh::load (const std::string &filename)
 
 
 
-
-int r = 0;
-int lx = 0;
-int rx = 0;
-int cx = 0;
-
 /**
  * @brief BSPTreeMesh::draw
  */
 void BSPTreeMesh::draw(Vec3Df cameraPosition)
 {
+    /* Numero di triangoli renderizzati nella draw corrente */
+    unsigned renderedTriangles;
+
     Vertex pov;
     pov.p = cameraPosition;
 
@@ -65,10 +61,8 @@ void BSPTreeMesh::draw(Vec3Df cameraPosition)
     glVertexPointer(3, GL_FLOAT, sizeof (Vertex), (GLvoid*)(&V()[0].p));
     glNormalPointer(GL_FLOAT, sizeof (Vertex), (GLvoid*)(((float*)&V()[0].p) + 3));
 
-    r = 0;
-    _draw (mBSPTreeRoot, pov);
-    std::cout << "BSPTreeMesh::draw() - " << r << " triangles of " << T().size() << " total\n" << std::flush;
-    std::cout << "BSPTreeMesh::draw() - Left: " << lx << " Right: " << rx << "\n" << std::flush;
+    renderedTriangles = _draw (mBSPTreeRoot, pov);
+    std::cout << "BSPTreeMesh::draw() - " << renderedTriangles << " triangles of " << T().size() << " total\n" << std::flush;
 
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
@@ -79,52 +73,53 @@ void BSPTreeMesh::draw(Vec3Df cameraPosition)
  * @brief BSPTreeMesh::_draw
  * @param root
  * @param pov
+ * @return Numero di triangoli renderizzati
  */
-void BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
+unsigned BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
 {
-    if (root == NULL) return;
+    if (root == NULL) return 0;
 
     if (BSPLeafNode* leaf = dynamic_cast<BSPLeafNode*>(root))
     {
         glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(&(leaf->NodeTriangle)));
-        r++;
+        return 1;
     }
     else if (BSPInternalNode* internal = dynamic_cast<BSPInternalNode*>(root))
     {
+        unsigned renderedTriangles = 0;
         double det = determinant (internal->NodeTriangles[0], pov);
         Position pos = determinantToPosition(det);
 
         switch (pos)
         {
         case POS_RIGHT:
-            _draw(internal->Left, pov);
+            renderedTriangles += _draw(internal->Left, pov);
             glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
                            GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
-            r+=internal->NodeTriangles.size();
-            rx++;
-            _draw(internal->Right, pov);
+            renderedTriangles += internal->NodeTriangles.size();
+            renderedTriangles += _draw(internal->Right, pov);
             break;
 
         case POS_LEFT:
-            _draw(internal->Right, pov);
+            renderedTriangles += _draw(internal->Right, pov);
             glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
                            GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
-            r+=internal->NodeTriangles.size();
-            lx++;
-            _draw(internal->Left, pov);
+            renderedTriangles += internal->NodeTriangles.size();
+            renderedTriangles += _draw(internal->Left, pov);
             break;
 
         case POS_CENTER:
             #ifdef DEBUG_TRIANGULATION
                 glDrawElements(GL_TRIANGLES, 3 * internal->NodeTriangles.size(),
                                GL_UNSIGNED_INT, (GLvoid*)(&internal->NodeTriangles[0]));
-                r+=internal->NodeTriangles.size();
+                renderedTriangles += internal->NodeTriangles.size();
             #endif
 
             _draw(internal->Right, pov);
             _draw(internal->Left, pov);
             break;
         }
+        return renderedTriangles;
     }
 }
 
