@@ -152,7 +152,7 @@ BSPTreeMesh::Position BSPTreeMesh::determinantToPosition (double d)
  * @brief BSPTreeMesh::determinant Calcola il determinante di un vertice rispetto ad un piano
  * @param t Piano
  * @param v Vertice da verificare
- * @return determinante
+ * @return Determinante
  */
 double BSPTreeMesh::determinant (Triangle t, Vertex v, double eps)
 {
@@ -178,9 +178,6 @@ double BSPTreeMesh::determinant (Triangle t, Vertex v, double eps)
 
 
 
-
-int nrx=0;
-int nlx=0;
 /**
  * @brief BSPTreeMesh::createBSPTree
  */
@@ -193,9 +190,7 @@ void BSPTreeMesh::createBSPTree ()
     if (mBSPTreeRoot != NULL)
         delete mBSPTreeRoot;
 
-    /* Randomizzo l'input (I triangoli) */
-    std::random_shuffle(T().begin(), T().end());
-    std::random_shuffle(T().begin(), T().end());
+    /* Randomizzo l'input (i triangoli) */
     std::random_shuffle(T().begin(), T().end());
 
     /* Crea il bsp tree */
@@ -205,7 +200,6 @@ void BSPTreeMesh::createBSPTree ()
 
     std::cout << "BSPTreeMesh::createBSPTree() ends with " << mNodesNumber
               << " nodes" << std::endl << std::flush;
-    std::cout << "BSPTreeMesh::createBSPTree() have " << nlx << " left nodes and " << nrx << " right nodes\n" << std::flush;
 }
 
 
@@ -303,7 +297,10 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
     CircularVec<bool> intersect_v;      // Lista di bool dove true = il vertice i e' un intersezione
     Vec3Df *intersect;                  // Puntatore di appoggio per le intersezioni
 
-    /* Aggiungo i vertici in ordine di comparsa */
+    /* Aggiungo i vertici in ordine di comparsa; parto dal primo vertice
+     * aggiungo l'intersezione tra il primo e secondo vertice (se esiste), aggiungo il secondo indice,
+     * intersezione tra secondo e terzo, terzo vertice. In questo modo ho una lista ordinata (circolare) in senso
+     * antiorario dei nuovi vertici da triangolare. */
     vertices.push_back(V()[oldTriangle[0]].p);
     vertices_i.push_back(oldTriangle[0]);
     intersect_v.push_back(false);
@@ -347,33 +344,34 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
     }
 
 
-    /* Ho solo un vertice intersezione, creo due triangoli */
+    /* Ora verifico quanti vertici ho; posso averne 4 (una sola intersezione), 5 (due intersezioni) */
+    /* Ho solo una intersezione, creo due triangoli */
     if (vertices.size() == 4)
     {
-        // Trovo l'indice di quello intersezione
+        /* Trovo l'indice di quello intersezione */
         int inti = 0;
         for (inti = 0; !intersect_v[inti]; inti++);
 
-        // I triangoli da fare sono T(inti, inti+1, inti+2) e T(inti-2, inti-1, inti)
+        /* I triangoli da fare sono T(inti, inti+1, inti+2) e T(inti-2, inti-1, inti) */
         newTriangles.push_back (Triangle(vertices_i[inti],vertices_i[inti+1], vertices_i[inti+2]));
         newTriangles.push_back (Triangle(vertices_i[inti-2],vertices_i[inti-1], vertices_i[inti]));
     }
     /* Due intersezioni, creo 3 triangoli */
     else if (vertices.size() == 5)
     {
-        // Trovo l'indice di quello intersezione
+        /* Trovo l'indice di quello intersezione */
         int inti = 0;
         for (inti = 0; !intersect_v[inti]; inti++);
 
-        // Se l'intersezione che ha trovato il for, e' distante 3 vertici dal successivo
-        // ritorno al caso generico impostando inti con l'indice dell'altra intersezione
+        /* Se l'intersezione che ha trovato il for, e' distante 3 vertici dal successivo
+         * ritorno al caso generico impostando inti con l'indice dell'altra intersezione */
         if (intersect_v[inti+3])
             inti = (inti + 3) % intersect_v.size();
 
-        // Creo il triangoletto solitario
+        /* Creo il triangoletto solitario */
         newTriangles.push_back (Triangle(vertices_i[inti],vertices_i[inti+1], vertices_i[inti+2]));
 
-        // Triangolo il restante quadrilatero
+        /* Triangolo il restante quadrilatero */
         newTriangles.push_back (Triangle(vertices_i[inti+2],vertices_i[inti+3], vertices_i[inti]));
         newTriangles.push_back (Triangle(vertices_i[inti+3],vertices_i[inti+4], vertices_i[inti]));
     }
@@ -391,7 +389,7 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
 
 
 /**
- * @brief positionOfTriangle
+ * @brief positionOfTriangle Determina la posizione del triangolo t rispetto al piano subplane
  * @param subplane Piano di taglio
  * @param t Triangolo da verificare
  * @param eps Definisce l'eps da utilizzare per il determinante
@@ -441,10 +439,11 @@ BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triang
 }
 
 
+
 /**
  * @brief BSPTreeMesh::_createBSPTree Funzione ricorsiva di creazione del bsptree
  * @param s Triangoli della partizione
- * @return
+ * @return Nodo root del sottoalbero
  */
 BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
 {
@@ -531,22 +530,16 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
                     case POS_LEFT:
                         leftTriangles.push_back(newTriangles[j]);
                         break;
+                    /* Questo case non e' necessario */
+                    #if 0
                     default:
                         centerTriangles.push_back(newTriangles[j]);
-                        std::cout << V()[s[i][0]].p << "\n" << V()[s[i][1]].p << "\n" << V()[s[i][2]].p << "\n";
-                        std::cout << V()[newTriangles[j][0]].p << "\n" << V()[newTriangles[j][1]].p << "\n" << V()[newTriangles[j][2]].p << "\n";
-                        std::cout << V()[subdivisionPlane[0]].p << "\n" << V()[subdivisionPlane[1]].p << "\n" << V()[subdivisionPlane[2]].p << "\n";
-                        std::cout << "Non puo' accadere " << prevalent << "\n" << std::flush;
+                    #endif
                     }
                 }
                 break;
             }
         }
-
-        if (leftTriangles.size() != 0)
-            nlx++;
-        if (rightTriangles.size() != 0)
-            nrx++;
 
         internal->Left = _createBSPTree (leftTriangles);
         internal->Right = _createBSPTree (rightTriangles);
@@ -560,19 +553,20 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
 
 
 /**
- * @brief BSPTreeMesh::load_OFF
- * @param filename
+ * @brief BSPTreeMesh::load_OFF Carica il file .off; ho fatto l'overload di questo metodo in modo
+ *          da eseguire direttamente la creazione del BSPTree a seguito del caricamento
+ * @param filename Path del file da caricare
  */
 void BSPTreeMesh::load_OFF (const std::string &filename)
 {
     Mesh::load_OFF (filename);
 
-    /* Prova a caricare il bsptree */
+    /* Prova a caricare il bsptree da file */
     if (load (filename))
     {
 
     }
-    /* Altrimenti lo genero */
+    /* Se non e' stato possibile caricare il bsptree, lo genero */
     else
     {
         createBSPTree ();
