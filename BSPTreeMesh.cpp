@@ -71,8 +71,8 @@ void BSPTreeMesh::draw(Vec3Df cameraPosition)
 
 /**
  * @brief BSPTreeMesh::_draw
- * @param root
- * @param pov
+ * @param root Nodo radice
+ * @param pov Punto di vista da considerare
  * @return Numero di triangoli renderizzati
  */
 unsigned BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
@@ -127,9 +127,9 @@ unsigned BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
 
 
 /**
- * @brief BSPTreeMesh::determinantToPosition
- * @param d
- * @return
+ * @brief BSPTreeMesh::determinantToPosition Converte il determinante in una posizione Position
+ * @param d Determinante da convertire
+ * @return Posizione simbolica dato il determinante
  */
 BSPTreeMesh::Position BSPTreeMesh::determinantToPosition (double d)
 {
@@ -214,11 +214,12 @@ Vec3Df BSPTreeMesh::normalOfTriangle (Triangle t)
 /**
  * @brief BSPTreeMesh::planeSegmentIntersection Calcola l'intersezione tra un piano
  *              (definito da 3 punti, ed un segmento definito da due vertici)
- * @param plane
- * @param a
- * @param b
+ * @param plane Piano
+ * @param a Primo vertice del segmento
+ * @param b Secondo vertice del segmento
  * @return Il punto di intersezione o NULL
  * @todo Verificare se effettivamente funziona come stabilito
+ * @note http://geomalgorithms.com/a05-_intersect-1.html - Line-Plane intersection
  */
 Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex b)
 {
@@ -230,35 +231,25 @@ Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex 
     float D = Vec3Df::dot_product(normal, u);
     float N = -Vec3Df::dot_product(normal, w);
 
+    /* Nessuna intersezione o segmento nel piano (N==0) */
     if (fabs(D) < EPS)
-    {           // segment is parallel to plane
-        if (N == 0)                      // segment lies in plane
-        {
-            //std::cout << "BSPTreeMesh::planeSegmentIntersection () - segment lies in plane\n" << std::flush;
-            return NULL;
-        }
-        else
-            return NULL;                    // no intersection
+    {
+        return NULL;
     }
-    // they are not parallel
-    // compute intersect param
+
+    /* Calcolo il punto di intersezione */
     float sI = N / D;
 
     if (sI < 0.0 || sI > 1.0)
-        return NULL;                        // no intersection
+        return NULL;
 
-    Vec3Df* contact = new Vec3Df(a.p + sI * u);        // compute segment intersect point
+    Vec3Df* contact = new Vec3Df(a.p + sI * u);
 
     if (Vec3Df::distance(*contact, a.p) < 0.000001 || Vec3Df::distance(*contact, b.p) < 0.000001)
-    {
-        //std::cout << "BSPTreeMesh::planeSegmentIntersection () - same point\n" << std::flush;
         return NULL;
-    }
     else
         return contact;
 }
-
-
 
 
 
