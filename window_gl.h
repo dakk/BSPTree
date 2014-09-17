@@ -16,7 +16,11 @@ class Window_gl : public QGLWidget
         public slots:
                 void open(const QString &filename);
 
+        protected slots:
+                void openFinished ();
+
         protected:
+                void _open(QString &filename);
                 void initializeGL();
                 void resizeGL(int w, int h);
                 void paintGL();
@@ -54,4 +58,6 @@ class Window_gl : public QGLWidget
                 Vec3Df  center;
                 Vec3Df  lastPoint3D;
                 QPoint  lastPoint2D;
+
+                QFutureWatcher<void> watcher;
 };
