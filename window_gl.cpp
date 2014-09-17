@@ -1,7 +1,10 @@
+#include <QtConcurrent/QtConcurrent>
+#include <iostream>
+
 #include "window_gl.h"
-#include <QMatrix3x3>
 
 #define TRACKBALL_RADIUS    0.6
+#define THREADING
 
 
 
@@ -15,21 +18,41 @@ Window_gl::Window_gl(QWidget *parent) : QGLWidget(parent)
 
 void Window_gl::open(const QString &filename)
 {
+    /* Ho implementato la open utilizzando un altro thread. Se da problemi con altre versioni di
+     * qt in altri os, commenta la riga #define THREADING */
+#ifdef THREADING
+    connect(&watcher, SIGNAL(finished()), this, SLOT(openFinished()));
+
+    QFuture<void> future = QtConcurrent::run(this, &Window_gl::_open, filename);
+    watcher.setFuture(future);
+#else
+    _open (filename);
+    openFinished();
+#endif
+}
+
+
+void Window_gl::openFinished ()
+{
+    centerScene();
+    updateProjectionMatrix();
+    updateGL();
+}
+
+
+void Window_gl::_open(QString &filename)
+{
     try
     {
         mesh.load_OFF(string(qPrintable(filename)));
 
         radius = mesh.bbox().diag() * 0.4;
         center = mesh.bbox().center();
-
-        centerScene();
-        updateProjectionMatrix();
     }
     catch (Mesh::Exception e)
     {
         cerr << e.msg () << endl;
     }
-    updateGL();
 }
 
 
