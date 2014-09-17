@@ -3,7 +3,7 @@ TARGET   = ShaderTest
 
 QT      += opengl
 CONFIG  += qt core opengl warn_on thread
-CONFIG  += c++11
+#CONFIG  += c++11
 
 LIBS += -lGLEW -lGLU
 

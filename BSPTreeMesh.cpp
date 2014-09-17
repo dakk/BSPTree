@@ -1,4 +1,3 @@
-#include <functional>
 #include <iostream>
 #include <vector>
 #include <qmatrix4x4.h>
