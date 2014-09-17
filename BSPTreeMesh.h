@@ -103,6 +103,7 @@ private:
     Vec3Df*     planeSegmentIntersection(Triangle plane, Vertex a, Vertex b);
     Vec3Df      normalOfTriangle        (Triangle t);
     Position    positionOfTriangle      (Triangle subplane, Triangle t, double eps = EPS, bool prevalent = false);
+    unsigned    createVertex            (Vec3Df vertexpos);
     std::vector<Triangle>               triangulate     (Triangle oldTriangle, Triangle cutPlane);
 
 

@@ -51,8 +51,6 @@ void Window_gl::translate(Vec3Df trans)
     glTranslated(trans[0], trans[1], trans[2]);
     glMultMatrixd(modelview_matrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
-
-    updateCameraPosition(trans);
 }
 
 
@@ -78,8 +76,6 @@ void Window_gl::rotate(Vec3Df axis, float angle)
     glTranslatef(-t[0], -t[1], -t[2]);
     glMultMatrixd(modelview_matrix);
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
-
-    updateCameraRotation(angle, axis);
 }
 
 void Window_gl::centerScene()
@@ -101,39 +97,19 @@ void Window_gl::centerScene()
 
 
 /**
- * @brief Window_gl::updateCameraPosition
- * @note La camera e' sempre fissa in 0.0, 0.0, 0.0; quando avviene una trasformazione geometrica non
- *      e' la camera che ruota o trasla ma tutto l'universo che si trasla e ruota, un po' come la
- *      PlanetExpress di Futurama.
- *      Questa funzione quindi, calcola la posizione del pov, ipotizzando che l'oggetto
- *      renderizzato rimanga fermo mentre il pov si modifica.
- * @note Stessa cosa per updateCameraRotation
+ * @brief Window_gl::getCameraPosition Restituisce la posizione della camera rispetto all'oggetto
+ * @note http://www.opengl.org/archives/resources/faq/technical/viewing.htm sez. 8.050
  */
-void Window_gl::updateCameraPosition (Vec3Df pos)
+Vec3Df Window_gl::getCameraPosition ()
 {
-    cameraPosition += pos;
-}
+    QMatrix4x4 modelView = QMatrix4x4(modelview_matrix[0], modelview_matrix[1], modelview_matrix[2],
+            modelview_matrix[3], modelview_matrix[4],modelview_matrix[5],modelview_matrix[6],modelview_matrix[7],
+            modelview_matrix[8],modelview_matrix[9],modelview_matrix[10],modelview_matrix[11],modelview_matrix[12],
+            modelview_matrix[13],modelview_matrix[14],modelview_matrix[15]);
+    QMatrix4x4 invert = modelView.inverted();
+    QVector4D newPos = invert.row(3);
 
-/**
- * @brief Window_gl::updateCameraRotation
- * @param angle
- * @param axisRotation
- * @note Per la rotazione invece, ipotizzio che l'oggetto sia circondato da una sfera;
- *          le rotazioni fanno muovere la camera nella superficie di tale sfera.
- * @note La sfera ha raggio dist(camera, 0)
- */
-void Window_gl::updateCameraRotation (float angle, Vec3Df axisRotation)
-{
-    double r = fabs (Vec3Df::distance (cameraPosition, Vec3Df (0.0, 0.0, 0.0)));
-    std::cout << r << "\n";
-    std::cout << axisRotation*angle << "\n";
-
-    cameraRotation += axisRotation;
-    axisRotation *= angle;
-
-    cameraPosition[0] = r * qSin (axisRotation[0] * 180.0 / M_PI) * qCos (axisRotation[1]* 180.0 / M_PI);
-    cameraPosition[1] = r * qSin (axisRotation[0] * 180.0 / M_PI) * qSin (axisRotation[1] * 180.0 / M_PI);
-    cameraPosition[2] = r * qCos (axisRotation[1]);
+    return Vec3Df (newPos[0], newPos[1], newPos[2]);
 }
 
 
@@ -152,7 +128,7 @@ void Window_gl::paintGL(void)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
-    mesh.draw(cameraPosition);
+    mesh.draw(getCameraPosition());
 }
 
 

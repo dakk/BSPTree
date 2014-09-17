@@ -51,6 +51,7 @@ void BSPTreeMesh::draw(Vec3Df cameraPosition)
     unsigned renderedTriangles;
 
     Vertex pov;
+    //pov.p = Vec3Df (0.0, 0.0, 3.0);
     pov.p = cameraPosition;
 
     std::cout << pov.p << "\n" << std::flush;
@@ -255,6 +256,20 @@ Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex 
 
 
 /**
+ * @brief BSPTreeMesh::createVertex Crea un vertice dato un vec3df, lo inserisce nella lista V()
+ * @param vertexpos Posizione del nuovo vertice
+ * @return Indice del nuovo vertice nella lista globale
+ */
+unsigned BSPTreeMesh::createVertex(Vec3Df vertexpos)
+{
+    Vertex v;
+    v.p = vertexpos;
+    V().push_back (v);
+    return V().size()-1;
+}
+
+
+/**
  * @brief triangulate Dato il vecchio triangolo ed il piano di taglio, ritriangola l'area
  * @param oldTriangle Triangolo da ritriangolare
  * @param cutPlane Piano di taglio considerato
@@ -265,18 +280,6 @@ Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex 
  */
 std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Triangle cutPlane)
 {
-    /* Crea un vertice dato un vec3df, lo inserisce nella lista V(),
-     * restituisce l'indice */
-    std::function<unsigned(Vec3Df)> createVertex = [&, this](Vec3Df p)
-    {
-        Vertex v;
-        v.p = p;
-        /*v.n = p;
-        v.n.normalize();*/
-        this->V().push_back (v);
-        return this->V().size()-1;
-    };
-
     std::vector<Triangle> newTriangles; // Nuovi triangoli generati
     CircularVec<Vec3Df> vertices;       // Dati dei vertici
     CircularVec<unsigned> vertices_i;   // Indici devi vertici
