@@ -3,10 +3,19 @@ BSPTree
 Generate and render the bsp tree of a 3d mesh (Qt/OpenGL).
 
 
+Dependencies
+---
+- Qt 5.2 or greater
+- OpenGL (tested on mesa-gl)
+- QtCreator
+
+
+Multithreading
+---
+The software implement concurrent loading of mesh; if this feature give problems on another
+version of qt or another os, disable it commenting "#define THREADING" on window_gl.h.
+
+
 To do:
 ---
-
-1. Move BSPTreeMesh::createBSPTree () to another thread and create a signal to inform the mainthread that the 
-	bsp creation has finished. It could be good to have a signal for percentage notify, but how?
-	I can use number of triangle in S for the current recursion step as percentage (near 0 -> near 100%).
-2. Solve point of view retriving
+- Implement load() and save() for BSPTreeMesh
