@@ -88,7 +88,10 @@ unsigned BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
     else if (BSPInternalNode* internal = dynamic_cast<BSPInternalNode*>(root))
     {
         unsigned renderedTriangles = 0;
-        double det = determinant (internal->NodeTriangles[0], pov);
+
+        /* Calcolo la posizione del punto di vista rispetto al piano di taglio; utilizzo un EPS pari a zero,
+         * in modo da non avere risultati imprecisi */
+        double det = determinant (internal->NodeTriangles[0], pov, 0.0);
         Position pos = determinantToPosition(det);
 
         switch (pos)
