@@ -12,6 +12,7 @@
  */
 BSPTreeMesh::BSPTreeMesh()
 {
+    mLoaded = false;
     mBSPTreeRoot = NULL;
 }
 
@@ -46,6 +47,8 @@ bool BSPTreeMesh::load (const std::string &filename)
  */
 void BSPTreeMesh::draw(Vec3Df cameraPosition)
 {
+    if (!mLoaded) return;
+
     /* Numero di triangoli renderizzati nella draw corrente */
     unsigned renderedTriangles;
 
@@ -181,6 +184,7 @@ double BSPTreeMesh::determinant (Triangle t, Vertex v, double eps)
  */
 void BSPTreeMesh::createBSPTree ()
 {
+    mLoaded = false;
     std::cout << "BSPTreeMesh::createBSPTree()" << std::endl << std::flush;
 
     mNodesNumber = 0;
@@ -198,6 +202,8 @@ void BSPTreeMesh::createBSPTree ()
 
     std::cout << "BSPTreeMesh::createBSPTree() ends with " << mNodesNumber
               << " nodes" << std::endl << std::flush;
+
+    mLoaded = true;
 }
 
 
@@ -550,6 +556,7 @@ BSPNode* BSPTreeMesh::_createBSPTree (std::vector<Triangle> s)
  */
 void BSPTreeMesh::load_OFF (const std::string &filename)
 {
+    mLoaded = false;
     Mesh::load_OFF (filename);
 
     /* Prova a caricare il bsptree da file */

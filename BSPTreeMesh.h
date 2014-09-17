@@ -93,6 +93,7 @@ protected:
     void        createBSPTree   ();
     BSPNode*    mBSPTreeRoot;
     unsigned    mNodesNumber;
+    bool        mLoaded;
 
 private:
     unsigned    _draw                   (BSPNode *root, Vertex pov);
