@@ -13,7 +13,7 @@ Dependencies
 Multithreading
 ---
 The software implement concurrent loading of mesh; if this feature give problems on another
-version of qt or another os, disable it commenting "#define THREADING" on window_gl.h.
+version of qt or another os, disable it commenting "#define THREADING" on window_gl.cpp.
 
 
 To do:

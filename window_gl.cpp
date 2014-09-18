@@ -6,9 +6,8 @@
 #define TRACKBALL_RADIUS    0.6
 #define THREADING
 
-
-
 using namespace std;
+
 
 Window_gl::Window_gl(QWidget *parent) : QGLWidget(parent)
 {
@@ -32,6 +31,9 @@ void Window_gl::open(const QString &filename)
 }
 
 
+/**
+ * @brief Window_gl::openFinished Richiamata quando il thread che esegue _open termina
+ */
 void Window_gl::openFinished ()
 {
     centerScene();
@@ -125,6 +127,7 @@ void Window_gl::centerScene()
  */
 Vec3Df Window_gl::getCameraPosition ()
 {
+    /* Inverto il modelview e prendo la terza riga */
     QMatrix4x4 modelView = QMatrix4x4(modelview_matrix[0], modelview_matrix[1], modelview_matrix[2],
             modelview_matrix[3], modelview_matrix[4],modelview_matrix[5],modelview_matrix[6],modelview_matrix[7],
             modelview_matrix[8],modelview_matrix[9],modelview_matrix[10],modelview_matrix[11],modelview_matrix[12],

@@ -18,9 +18,10 @@ BSPTreeMesh::BSPTreeMesh()
 
 
 /**
- * @brief BSPTreeMesh::save Salva il BSPTree
+ * @brief BSPTreeMesh::save Salva il BSPTree su file
  * @param filename Path di salvataggio
  * @return true se l'operazione e' andata a buon fine
+ * @todo Da implementare, le ho messe come possibile sviluppo futuro
  */
 bool BSPTreeMesh::save (const std::string &filename)
 {
@@ -30,9 +31,10 @@ bool BSPTreeMesh::save (const std::string &filename)
 
 
 /**
- * @brief BSPTreeMesh::load Carica il BSPTree
+ * @brief BSPTreeMesh::load Carica il BSPTree da file
  * @param filename Path di caricamento
  * @return true se l'operazione e' andata a buon fine
+ * @todo Da implementare, le ho messe come possibile sviluppo futuro
  */
 bool BSPTreeMesh::load (const std::string &filename)
 {
@@ -52,11 +54,11 @@ void BSPTreeMesh::draw(Vec3Df cameraPosition)
     /* Numero di triangoli renderizzati nella draw corrente */
     unsigned renderedTriangles;
 
+    /* Inizializzo il punto di vista */
     Vertex pov;
-    //pov.p = Vec3Df (0.0, 0.0, 3.0);
     pov.p = cameraPosition;
 
-    std::cout << pov.p << "\n" << std::flush;
+    std::cout << "Camera at: " << pov.p << "\n" << std::flush;
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
@@ -82,11 +84,14 @@ unsigned BSPTreeMesh::_draw (BSPNode *root, Vertex pov)
 {
     if (root == NULL) return 0;
 
+    /* Se ho una foglia, disegno l'unico triangolo che contiene */
     if (BSPLeafNode* leaf = dynamic_cast<BSPLeafNode*>(root))
     {
         glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(&(leaf->NodeTriangle)));
         return 1;
     }
+    /* Altrimenti verifico la posizione della camera rispetto al piano di taglio, e determino
+     * l'ordine di rendering di conseguenza */
     else if (BSPInternalNode* internal = dynamic_cast<BSPInternalNode*>(root))
     {
         unsigned renderedTriangles = 0;
@@ -254,6 +259,7 @@ Vec3Df* BSPTreeMesh::planeSegmentIntersection (Triangle plane, Vertex a, Vertex 
 
     Vec3Df* contact = new Vec3Df(a.p + sI * u);
 
+    /* Se il punto di intersezione coincide con un vertice del segmento, lo scarto */
     if (Vec3Df::distance(*contact, a.p) < 0.000001 || Vec3Df::distance(*contact, b.p) < 0.000001)
         return NULL;
     else
@@ -391,13 +397,14 @@ std::vector<Mesh::Triangle> BSPTreeMesh::triangulate(Triangle oldTriangle, Trian
  * @param t Triangolo da verificare
  * @param eps Definisce l'eps da utilizzare per il determinante
  * @param prevalent Se true, restituisce la posizione prevalente (evitando POS_INTERSECT e POS_CENTER)
- * @return
+ * @return La posizione desiderata
  */
 BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triangle t, double eps, bool prevalent)
 {
     Position ps[3];
     unsigned left = 0, right = 0, center = 0;
 
+    /* Calcolo i determinanti dei singoli vertici, e verifico quanti di essi sono a destra, sinistra o centrali */
     ps[0] = determinantToPosition(determinant (subplane, V()[t[0]], eps));
     ps[1] = determinantToPosition(determinant (subplane, V()[t[1]], eps));
     ps[2] = determinantToPosition(determinant (subplane, V()[t[2]], eps));
@@ -417,6 +424,7 @@ BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triang
         }
     }
 
+    /* Se voglio la posizione prevalente, prendo quella con valore maggiore */
     if (prevalent)
     {
         if (left > right)
@@ -425,6 +433,7 @@ BSPTreeMesh::Position BSPTreeMesh::positionOfTriangle (Triangle subplane, Triang
             return POS_RIGHT;
     }
 
+    /* Altrimenti verifico i casi */
     if (left > 0 && right > 0)
         return POS_INTERSECT;
     else if (center == 3)
