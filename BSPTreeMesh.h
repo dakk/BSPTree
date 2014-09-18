@@ -10,7 +10,7 @@
 
 /** Approssimazione per lo zero del determinante */
 #define EPS 0.0000001
-//0.0000000001;
+
 
 /**
  * @brief Un vettore circolare; ci servira' per accedere agli elementi
@@ -106,29 +106,6 @@ private:
     Position    positionOfTriangle      (Triangle subplane, Triangle t, double eps = EPS, bool prevalent = false);
     unsigned    createVertex            (Vec3Df vertexpos);
     std::vector<Triangle>               triangulate     (Triangle oldTriangle, Triangle cutPlane);
-
-
-
-    /** Traduce Position in una stringa, utilizzata per debug */
-    inline std::string positionToString (Position p)
-    {
-        switch (p)
-        {
-        case POS_RIGHT:
-            return "Right";
-            break;
-        case POS_LEFT:
-            return "Left";
-            break;
-        case POS_CENTER:
-            return "Center";
-            break;
-        case POS_INTERSECT:
-            return "Intersect";
-            break;
-        }
-    }
-
 };
 
 #endif // BSPTREEMESH_H
